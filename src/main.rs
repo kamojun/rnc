@@ -21,7 +21,7 @@ fn main() -> Result<(), String> {
     // 最初(プログラム名)と最後(入力)は無視する
     let matches = match opts.parse(&args[1..args.len()]) {
         Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
+        Err(f) => panic!("{}", f.to_string()),
     };
     // Result型を返すことで、, エラー終了時に終了ステータス1となる。
     match env::args().last() {
