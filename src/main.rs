@@ -13,17 +13,20 @@ use crate::err::*;
 use crate::parse::*;
 use crate::tokenize::*;
 
+/// エラー終了時には終了ステータス1となる(Result型を返すため)
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
+
+    // コマンドラインオプション
     let mut opts = Options::new();
     opts.optflag("t", "", "print token list and types");
     opts.optflag("g", "", "print node graph");
-    // 最初(プログラム名)と最後(入力)は無視する
     let matches = match opts.parse(&args[1..args.len()]) {
+        // コマンドライン引数の先頭と末尾はオプションではない
         Ok(m) => m,
-        Err(f) => panic!("{}", f.to_string()),
+        Err(f) => Err(f.to_string())?,
     };
-    // Result型を返すことで、, エラー終了時に終了ステータス1となる。
+
     match env::args().last() {
         Some(filename) => {
             println!(".file 1 \"{}\"", filename);
@@ -44,12 +47,15 @@ fn main() -> Result<(), String> {
 }
 
 fn compile(code: &String, print_tklist: bool, print_graph_: bool) -> Result<(), CompileError> {
+    // トークナイズ
     let token_list = Lexer::new(code).tokenize()?;
     if print_tklist {
         for tk in &token_list {
             println!("{:?}", tk);
         }
     }
+
+    // パース
     let parser = Parser::new(&token_list, code.split('\n').collect());
     let (functions, globals, string_literals, types) = parser.program()?;
     if print_graph_ {
@@ -58,6 +64,8 @@ fn compile(code: &String, print_tklist: bool, print_graph_: bool) -> Result<(), 
     if print_tklist {
         println!("{:?}", types);
     }
+
+    // アセンブリコード生成
     code_gen(functions, globals, string_literals, token_list, types)?;
     Ok(())
 }

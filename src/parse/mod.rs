@@ -675,7 +675,7 @@ impl<'a> Parser<'a> {
         }
         let (name, ty) = self.declarator(basety.clone())?;
         self.check_global_name(&name)?;
-        // 次に関数の有無を見る
+        // 次に関数の有無を見る "("があれば関数、そうでなければグローバル変数
         if self.peek("(") {
             // 関数の宣言
             self.enter_scope();
@@ -687,35 +687,37 @@ impl<'a> Parser<'a> {
             if self.consume(";") {
                 // int func();のように関数の宣言のみの場合
                 self.leave_scope(); // スコープは全く使わずに捨てる
-                return Ok(None);
+                self.locals = vec![]; // ローカル変数はリセット
+                Ok(None)
+            } else {
+                // 関数の定義がある場合
+                let stmts = self.compound_stmt(false)?;
+                self.leave_scope();
+                Ok(Some(Function::new(
+                    ty,
+                    name,
+                    stmts,
+                    params,
+                    std::mem::replace(&mut self.locals, vec![]),
+                    is_static,
+                )))
             }
-            let stmts = self.compound_stmt(false)?;
-            self.leave_scope();
-            // dbg!(&self.types);
-            // dbg!(&self.locals);
-            return Ok(Some(Function::new(
-                ty,
-                name,
-                stmts,
-                params,
-                std::mem::replace(&mut self.locals, vec![]),
-                is_static,
-            )));
-        }
-        // 関数でないとしたら、グローバル変数が続いている
-        self.global_vardef(name, ty, is_static, is_extern, false)?;
-        if !self.consume(";") {
-            loop {
-                self.expect(",")?;
-                let (name, ty) = self.declarator(basety.clone())?;
-                self.check_global_name(&name)?;
-                self.global_vardef(name, ty, is_static, is_extern, false)?;
-                if self.consume(";") {
-                    break;
+        } else {
+            // 関数でないとしたら、グローバル変数が続いている
+            self.global_vardef(name, ty, is_static, is_extern, false)?;
+            if !self.consume(";") {
+                loop {
+                    self.expect(",")?;
+                    let (name, ty) = self.declarator(basety.clone())?;
+                    self.check_global_name(&name)?;
+                    self.global_vardef(name, ty, is_static, is_extern, false)?;
+                    if self.consume(";") {
+                        break;
+                    }
                 }
             }
+            Ok(None)
         }
-        Ok(None)
     }
     /// declarator = ptr ("(" declarator ")" | ident) ("[" num "]")*
     fn declarator(&mut self, mut ty: TypeRef) -> Result<(String, TypeRef), ParseError> {
