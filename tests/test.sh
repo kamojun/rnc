@@ -7,4 +7,9 @@ fi
 # CMD+=' |  gcc -xc -c -o tmp2.o -;'
 CMD+="gcc -static -o tmp tmp.s && ./tmp"
 
-docker run --rm --mount type=bind,src=$PWD/bind,dst=/home/user --workdir /home/user compilerbook /bin/bash -c "$CMD"
+# if intel
+# docker run --rm --mount type=bind,src=$PWD/bind,dst=/home/user --workdir /home/user compilerbook /bin/bash -c "$CMD"
+
+# if apple silicon
+# ubuntuのイメージをpullして、gccを入れたやつをubuntu2とした。
+docker run --rm --platform linux/amd64 --mount type=bind,src=$PWD/bind,dst=/home/user --workdir /home/user ubuntu2 /bin/bash -c "$CMD"
