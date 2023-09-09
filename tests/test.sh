@@ -6,17 +6,20 @@ cat >&2 <<EOS
  --no-build:       コンパイラをビルドしない
  --apple-silicon:  apple-silicon mac
  -d | --docker-image <VALUE>:  実行するdockerのイメージ名
+ -i | --input-file <VALUE>:  実行するファイル名、デフォルトはtests/tests.c
 EOS
 exit 1
 }
 
 IMAGE=compilerbook
+INPUT_FILE="tests/tests.c"
 while [ "$#" != 0 ]; do
   case $1 in
     -h | --help      ) usage;;
     --no-build       ) NO_BUILD=true;;
     --apple-silicon  ) APPLE_SILICON=true;;
     -d | --docker-image ) shift; IMAGE=$1;;
+    -i | --input-file) shift; INPUT_FILE=$1;;
     -* | --*         ) echo "$1 : invalid option" ;;
   esac
   shift
@@ -26,7 +29,7 @@ if ! ${NO_BUILD:-false}; then
   cargo build
 fi
 
-./target/debug/rnc tests/tests.c > bind/tmp.s
+./target/debug/rnc ${INPUT_FILE} > bind/tmp.s
 CMD="gcc -static -o tmp tmp.s && ./tmp"
 
 if ${APPLE_SILICON:-false}; then
